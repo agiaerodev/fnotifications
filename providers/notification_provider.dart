@@ -44,13 +44,22 @@ class NotificationProvider extends ChangeNotifier {
   List<AppNotification> _apiNotifications = [];
   GlobalKey<ScaffoldMessengerState>? _snackbarKey;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _isRefreshing = false;
   String? _errorMessage;
+  int _currentPage = 1;
+  int _lastPage = 1;
+  bool _hasLoadedOnce = false;
 
   // Getters
   bool get hasUnreadNotification => _hasUnreadNotification;
   List<PushNotification> get notifications => List.unmodifiable(_notifications);
   List<AppNotification> get apiNotifications => List.unmodifiable(_apiNotifications);
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get isRefreshing => _isRefreshing;
+  bool get hasLoadedOnce => _hasLoadedOnce;
+  bool get hasNextPage => _currentPage < _lastPage;
   String? get errorMessage => _errorMessage;
   int get unreadCount {
     final apiUnreadCount = _apiNotifications.where((item) => !item.isRead).length;
@@ -119,21 +128,33 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadNotifications() async {
-    if (_isLoading) return;
+  Future<void> loadNotifications({bool refresh = false, bool loadMore = false}) async {
+    if (_isLoading || _isLoadingMore) return;
+    if (loadMore && !hasNextPage) return;
 
-    _isLoading = true;
+    if (refresh) {
+      _isRefreshing = true;
+      _currentPage = 1;
+      _lastPage = 1;
+    } else if (loadMore) {
+      _isLoadingMore = true;
+    } else {
+      _isLoading = true;
+    }
+
     _errorMessage = null;
     notifyListeners();
 
     try {
+      final page = refresh ? 1 : (_currentPage + 1);
       final response = await _apiService.index(
         _route,
         config: {
           'refresh': true,
           'params': {
-            'page': 1,
+            'page': page,
             'take': 20,
+            'filter': {'me': true, 'type': 'broadcast'},
           },
         },
       );
@@ -142,13 +163,29 @@ class NotificationProvider extends ChangeNotifier {
         Map<String, dynamic>.from(response as Map),
       );
 
-      _apiNotifications = parsed.data;
+      final incoming = parsed.data;
+      if (refresh || page == 1) {
+        _apiNotifications = incoming;
+      } else {
+        for (final item in incoming) {
+          final exists = _apiNotifications.any((existing) => existing.id == item.id);
+          if (!exists) {
+            _apiNotifications.add(item);
+          }
+        }
+      }
+
+      _currentPage = parsed.meta.page.currentPage;
+      _lastPage = parsed.meta.page.lastPage;
       _hasUnreadNotification = unreadCount > 0;
+      _hasLoadedOnce = true;
     } catch (e) {
       _errorMessage = 'Error loading notifications';
       debugPrint('NotificationProvider loadNotifications Error: $e');
     } finally {
       _isLoading = false;
+      _isLoadingMore = false;
+      _isRefreshing = false;
       notifyListeners();
     }
   }
