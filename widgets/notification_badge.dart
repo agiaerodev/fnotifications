@@ -44,7 +44,7 @@ class _NotificationBadgeState extends State<NotificationBadge>
           border: Border.all(color: Colors.white, width: 2),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF2490D0).withOpacity(0.5),
+              color: const Color(0xFF2490D0).withValues(alpha: 0.5),
               blurRadius: 4,
               spreadRadius: 1,
             ),

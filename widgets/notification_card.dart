@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../../core/utils/fa_icon_mapper.dart';
 
 class NotificationCard extends StatelessWidget {
   final String title;
@@ -14,71 +18,117 @@ class NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extraemos el tipo de la data (por ejemplo: 'info', 'alert', 'success', 'cancel')
-    final String type = data['type'] ?? '';
-
-    // Configuramos el estilo basado en la imagen que pasaste
+    final String type = (data['type'] ?? '').toString();
+    final String timeAgo = (data['timeAgo'] ?? '').toString();
+    final bool isRead = data['isRead'] == true;
     final config = _getStyleConfig(type);
+    final String rawIcon = (data['icon'] ?? data['sourceIcon'] ?? '').toString();
+    final String link = (data['link'] ?? '').toString();
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // El Logo estilo circular de tu imagen
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: config.backgroundColor,
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: link.isEmpty ? null : () => _openLink(link),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(
-              config.icon,
-              color: config.iconColor,
-              size: 24,
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: config.backgroundColor,
+                shape: BoxShape.circle,
+              ),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: Center(child: _buildIcon(rawIcon, config)),
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          // Texto de la notificación
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.blueGrey[400],
-                  ),
-                ),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                 Row(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Expanded(
+                       child: Text(
+                         title,
+                         style: TextStyle(
+                           fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
+                           fontSize: 16,
+                           color: const Color(0xFF1E293B),
+                         ),
+                       ),
+                     ),
+                     if (timeAgo.isNotEmpty) ...[
+                       const SizedBox(width: 12),
+                       Text(
+                         timeAgo,
+                         style: TextStyle(
+                           fontSize: 12,
+                           color: Colors.blueGrey[300],
+                         ),
+                       ),
+                     ],
+                   ],
+                 ),
+                 const SizedBox(height: 4),
+                 Text(
+                   description,
+                   style: TextStyle(
+                     fontSize: 14,
+                     color: Colors.blueGrey[400],
+                   ),
+                 ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildIcon(String iconClass, _NotificationStyle config) {
+    if (iconClass.isNotEmpty && iconClass.contains('fa-')) {
+      return FaIcon(
+        faIconFromClasses(iconClass, fallback: FontAwesomeIcons.bell),
+        color: config.iconColor,
+        size: 24,
+      );
+    }
+
+    return Icon(
+      config.icon,
+      color: config.iconColor,
+      size: 24,
+    );
+  }
+
+  Future<void> _openLink(String link) async {
+    final uri = Uri.tryParse(link);
+    if (uri == null || !uri.hasScheme) return;
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   _NotificationStyle _getStyleConfig(String type) {
