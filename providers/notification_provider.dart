@@ -50,6 +50,7 @@ class NotificationProvider extends ChangeNotifier {
   int _currentPage = 1;
   int _lastPage = 1;
   bool _hasLoadedOnce = false;
+  int? _currentUserId;
 
   // Getters
   bool get hasUnreadNotification => _hasUnreadNotification;
@@ -69,6 +70,14 @@ class NotificationProvider extends ChangeNotifier {
 
   void setSnackBarKey(GlobalKey<ScaffoldMessengerState> key) {
     _snackbarKey = key;
+  }
+
+  void setCurrentUser(dynamic user) {
+    if (user is Map && user['id'] != null) {
+      _currentUserId = int.tryParse(user['id'].toString());
+    } else {
+      _currentUserId = null;
+    }
   }
 
   Future<void> initializeLocalNotifications() async {
@@ -146,6 +155,11 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (_currentUserId == null) {
+        _errorMessage = 'User ID is not available';
+        return;
+      }
+
       final page = refresh ? 1 : (_currentPage + 1);
       final response = await _apiService.index(
         _route,
@@ -154,7 +168,7 @@ class NotificationProvider extends ChangeNotifier {
           'params': {
             'page': page,
             'take': 20,
-            'filter': {'me': true, 'type': 'broadcast'},
+            'filter': {'recipient': _currentUserId, 'type': 'push'},
           },
         },
       );
@@ -249,7 +263,7 @@ class NotificationProvider extends ChangeNotifier {
 
     final appNotification = AppNotification(
       id: int.tryParse(message.data['id']?.toString() ?? '') ?? now.millisecondsSinceEpoch,
-      type: message.data['type']?.toString() ?? 'broadcast',
+      type: message.data['type']?.toString() ?? 'push',
       title: title,
       message: body,
       icon: message.data['icon']?.toString() ?? 'far fa-bell',
