@@ -168,7 +168,7 @@ class NotificationProvider extends ChangeNotifier {
           'params': {
             'page': page,
             'take': 20,
-            'filter': {'recipient': _currentUserId, 'type': 'push'},
+            'filter': {'type': 'push', 'order':{'way':"desc"}},
           },
         },
       );
