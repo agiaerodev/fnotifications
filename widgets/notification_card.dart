@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/utils/fa_icon_mapper.dart';
+import '../routes/notification_deep_link.dart';
 
 class NotificationCard extends StatelessWidget {
   final String title;
@@ -26,7 +28,7 @@ class NotificationCard extends StatelessWidget {
     final String link = (data['link'] ?? '').toString();
 
     return InkWell(
-      onTap: link.isEmpty ? null : () => _openLink(link),
+      onTap: link.isEmpty ? null : () => _openLink(context, link),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -122,7 +124,15 @@ class NotificationCard extends StatelessWidget {
     );
   }
 
-  Future<void> _openLink(String link) async {
+  /// Un `link` interno abre la vista dentro de la app, igual que al tocar el
+  /// push; uno http(s) sigue siendo contenido web y va al navegador.
+  Future<void> _openLink(BuildContext context, String link) async {
+    final location = normalizeNotificationLink(link);
+    if (location != null) {
+      context.push(location);
+      return;
+    }
+
     final uri = Uri.tryParse(link);
     if (uri == null || !uri.hasScheme) return;
 

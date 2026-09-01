@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/services/base_api_service.dart';
 import '../../../core/routes/app_routes.dart';
 import '../models/notification_model.dart';
+import '../routes/notification_deep_link.dart';
 import '../routes/notification_route_names.dart';
 
 /// Modelo simple para tipar las notificaciones dentro de la app
@@ -91,7 +92,7 @@ class NotificationProvider extends ChangeNotifier {
     await _localNotificationsPlugin.initialize(
       settings: initSettings,
       onDidReceiveNotificationResponse: (details) {
-        _openNotifications();
+        _openLocation(details.payload);
       },
     );
 
@@ -225,8 +226,7 @@ class NotificationProvider extends ChangeNotifier {
   void _onMessageOpenedApp(RemoteMessage message) {
     _setHasUnread(false);
     unawaited(_clearLocalNotifications());
-    _openNotifications();
-    debugPrint('Navegando a través de notificación: ${message.data}');
+    _openLocation(resolveNotificationLocation(message.data));
   }
 
   void markAsRead() {
@@ -236,14 +236,18 @@ class NotificationProvider extends ChangeNotifier {
     unawaited(_clearLocalNotifications());
   }
 
-  void _openNotifications() {
+  void _openLocation(String? location) {
+    final target = (location == null || location.isEmpty)
+      ? NotificationRouteNames.notifications
+      : location;
+
     final context = rootNavigatorKey.currentState?.context;
     if (context == null) return;
 
     final router = GoRouter.of(context);
     final currentLocation = router.routerDelegate.currentConfiguration.uri.toString();
-    if (currentLocation != NotificationRouteNames.notifications) {
-      router.push(NotificationRouteNames.notifications);
+    if (currentLocation != target) {
+      router.push(target);
     }
   }
 
@@ -321,7 +325,8 @@ class NotificationProvider extends ChangeNotifier {
           presentSound: true,
         ),
       ),
-      payload: NotificationRouteNames.notifications,
+      payload: resolveNotificationLocation(message.data) ??
+          NotificationRouteNames.notifications,
     );
   }
 
