@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../core/services/base_api_service.dart';
 import '../../../core/utils/firebase_messaging_helper.dart';
 
@@ -12,6 +11,14 @@ class DeviceTokenService extends BaseApiService {
   /// Obtiene el FCM token y lo registra en el backend asociado al [userId].
   Future<void> registerDeviceToken(int userId) async {
     try {
+      if (Platform.isIOS) {
+        final apnsToken = await FirebaseMessagingHelper.waitForApnsToken();
+        if (apnsToken == null || apnsToken.isEmpty) {
+          debugPrint('[DeviceTokenService] APNs token aún no disponible');
+          return;
+        }
+      }
+
       final fcmToken = await FirebaseMessagingHelper.getTokenSafely();
       if (fcmToken == null || fcmToken.isEmpty) {
         debugPrint('[DeviceTokenService] FCM token no disponible');

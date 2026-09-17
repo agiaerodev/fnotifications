@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -83,7 +84,16 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> initializeLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+      defaultPresentAlert: true,
+      defaultPresentSound: true,
+      defaultPresentBadge: true,
+      defaultPresentBanner: true,
+      defaultPresentList: true,
+    );
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -122,19 +132,48 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> initializeNotifications() async {
+    debugPrint('[PUSH] initializeNotifications: registrando listeners onMessage/onMessageOpenedApp');
+    // Register the foreground listener first so a failure in the permission or
+    // local-notification setup below can never leave onMessage unsubscribed.
+    FirebaseMessaging.onMessage.listen(
+      _onForegroundMessage,
+      onError: (Object e) => debugPrint('[PUSH] onMessage stream ERROR: $e'),
+    );
+    FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
+
     try {
+      // IMPORTANT: on iOS, firebase_messaging's presentation options are
+      // applied to every notification that passes through
+      // UNUserNotificationCenter (including local notifications posted by
+      // flutter_local_notifications), because both plugins share the same
+      // native delegate (AppDelegate.swift) and Firebase does not
+      // distinguish the notification's origin. Setting alert:false here
+      // would silently suppress local notifications too. Keep this at
+      // alert:true and instead avoid duplicates in _onForegroundMessage.
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      debugPrint('[PUSH] foreground presentation options = alert/badge/sound');
       await _requestPermissions();
       await initializeLocalNotifications();
 
-      FirebaseMessaging.onMessage.listen(_onForegroundMessage);
-      FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
+      if (Platform.isIOS) {
+        final apns = await _messaging.getAPNSToken();
+        debugPrint('[PUSH] APNs token (desde Dart): ${apns ?? "NULL -> APNs no registrado"}');
+      }
+      final fcm = await _messaging.getToken();
+      debugPrint('[PUSH] FCM token (desde Dart): ${fcm ?? "NULL"}');
 
       final initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
+        debugPrint('[PUSH] initialMessage: ${initialMessage.messageId}');
         _onMessageOpenedApp(initialMessage);
       }
+      debugPrint('[PUSH] initializeNotifications completado');
     } catch (e) {
-      debugPrint('NotificationProvider Error: $e');
+      debugPrint('[PUSH] initializeNotifications ERROR: $e');
     }
   }
 
@@ -210,20 +249,30 @@ class NotificationProvider extends ChangeNotifier {
       alert: true,
       badge: true,
       sound: true,
+      announcement: true,
+      carPlay: true,
+      criticalAlert: true,
+      provisional: false,
     );
-    debugPrint('Estado de permisos: ${settings.authorizationStatus}');
+    debugPrint(
+      '[PUSH] permisos: status=${settings.authorizationStatus} '
+      'alert=${settings.alert} badge=${settings.badge} sound=${settings.sound}',
+    );
   }
 
   void _onForegroundMessage(RemoteMessage message) {
-    final notification = message.notification;
-    if (notification == null) return;
-
-    _showLocalNotification(message);
+    debugPrint('[PUSH] >>> onMessage (app ACTIVA) id=${message.messageId}');
+    debugPrint('[PUSH]     title=${message.notification?.title} body=${message.notification?.body}');
+    debugPrint('[PUSH]     data=${message.data}');
+    if (!Platform.isIOS) {
+      _showLocalNotification(message);
+    }
     _addNotificationToList(message);
     _setHasUnread(true);
   }
 
   void _onMessageOpenedApp(RemoteMessage message) {
+    debugPrint('[PUSH] >>> onMessageOpenedApp id=${message.messageId} data=${message.data}');
     _setHasUnread(false);
     unawaited(_clearLocalNotifications());
     _openLocation(resolveNotificationLocation(message.data));
@@ -323,6 +372,8 @@ class NotificationProvider extends ChangeNotifier {
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
+          presentBanner: true,
+          presentList: true,
         ),
       ),
       payload: resolveNotificationLocation(message.data) ??
