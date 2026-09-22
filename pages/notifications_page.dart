@@ -109,6 +109,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         leading: const BackButton(color: Color(0xFF1E293B)),
       ),
       body: RefreshIndicator(
