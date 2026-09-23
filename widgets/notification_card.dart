@@ -27,6 +27,7 @@ class NotificationCard extends StatelessWidget {
     final config = _getStyleConfig(type);
     final String rawIcon = (data['icon'] ?? data['sourceIcon'] ?? '').toString();
     final String link = (data['link'] ?? '').toString();
+    final bool hasHtmlContent = _containsHtml(description);
 
     return InkWell(
       onTap: link.isEmpty ? null : () => _openLink(context, link),
@@ -93,26 +94,35 @@ class NotificationCard extends StatelessWidget {
                    ],
                  ),
                  const SizedBox(height: 4),
-                 Html(
-                   data: description,
-                   style: {
-                     'html': Style(
-                       margin: Margins.zero,
-                       padding: HtmlPaddings.zero,
-                     ),
-                     'body': Style(
-                       margin: Margins.zero,
-                       padding: HtmlPaddings.zero,
-                       fontSize: FontSize(14),
-                       color: Colors.blueGrey[400],
-                     ),
-                     'p': Style(
-                       margin: Margins.only(bottom: 12),
-                       padding: HtmlPaddings.zero,
-                     ),
-                     'strong': Style(fontWeight: FontWeight.w700),
-                   },
-                 ),
+                 hasHtmlContent
+                     ? Html(
+                         data: description,
+                         style: {
+                           'html': Style(
+                             margin: Margins.zero,
+                             padding: HtmlPaddings.zero,
+                           ),
+                           'body': Style(
+                             margin: Margins.zero,
+                             padding: HtmlPaddings.zero,
+                             fontSize: FontSize(14),
+                             color: Colors.blueGrey[400],
+                           ),
+                           'p': Style(
+                             margin: Margins.only(bottom: 12),
+                             padding: HtmlPaddings.zero,
+                           ),
+                           'strong': Style(fontWeight: FontWeight.w700),
+                         },
+                       )
+                     : Text(
+                         description,
+                         style: TextStyle(
+                           fontSize: 14,
+                           color: Colors.blueGrey[400],
+                           height: 1.4,
+                         ),
+                       ),
                 ],
               ),
             ),
@@ -188,6 +198,10 @@ class NotificationCard extends StatelessWidget {
           backgroundColor: const Color(0xFFE1F5FE),
         );
     }
+  }
+
+  bool _containsHtml(String value) {
+    return RegExp(r'<[^>]+>').hasMatch(value);
   }
 }
 
