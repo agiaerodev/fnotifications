@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -92,12 +93,25 @@ class NotificationCard extends StatelessWidget {
                    ],
                  ),
                  const SizedBox(height: 4),
-                 Text(
-                   description,
-                   style: TextStyle(
-                     fontSize: 14,
-                     color: Colors.blueGrey[400],
-                   ),
+                 Html(
+                   data: description,
+                   style: {
+                     'html': Style(
+                       margin: Margins.zero,
+                       padding: HtmlPaddings.zero,
+                     ),
+                     'body': Style(
+                       margin: Margins.zero,
+                       padding: HtmlPaddings.zero,
+                       fontSize: FontSize(14),
+                       color: Colors.blueGrey[400],
+                     ),
+                     'p': Style(
+                       margin: Margins.only(bottom: 12),
+                       padding: HtmlPaddings.zero,
+                     ),
+                     'strong': Style(fontWeight: FontWeight.w700),
+                   },
                  ),
                 ],
               ),
