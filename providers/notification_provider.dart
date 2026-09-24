@@ -312,7 +312,7 @@ class NotificationProvider extends ChangeNotifier {
   void _addNotificationToList(RemoteMessage message) {
     final now = DateTime.now();
     final title = message.notification?.title ?? message.data['title'] ?? 'New notification';
-    final body = message.notification?.body ?? message.data['message'] ?? '';
+    final body = _extractNotificationBody(message);
 
     final appNotification = AppNotification(
       id: int.tryParse(message.data['id']?.toString() ?? '') ?? now.millisecondsSinceEpoch,
@@ -353,7 +353,7 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
     final title = message.notification?.title ?? message.data['title'] ?? 'New notification';
-    final body = message.notification?.body ?? message.data['message'] ?? '';
+    final body = _stripHtml(_extractNotificationBody(message));
 
     await _localNotificationsPlugin.show(
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -386,5 +386,22 @@ class NotificationProvider extends ChangeNotifier {
     _notifications.clear();
     _apiNotifications = [];
     super.dispose();
+  }
+
+  String _extractNotificationBody(RemoteMessage message) {
+    final dataMessage = message.data['message']?.toString().trim();
+    if (dataMessage != null && dataMessage.isNotEmpty) {
+      return dataMessage;
+    }
+    final notificationBody = message.notification?.body?.trim();
+    if (notificationBody != null && notificationBody.isNotEmpty) {
+      return notificationBody;
+    }
+    return '';
+  }
+
+  String _stripHtml(String value) {
+    final withoutTags = value.replaceAll(RegExp(r'<[^>]*>'), ' ');
+    return withoutTags.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 }
