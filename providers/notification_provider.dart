@@ -294,8 +294,8 @@ class NotificationProvider extends ChangeNotifier {
     if (context == null) return;
 
     final router = GoRouter.of(context);
-    final currentLocation = router.routerDelegate.currentConfiguration.uri.toString();
-    if (currentLocation != target) {
+    final currentPath = router.routerDelegate.currentConfiguration.uri.path;
+    if (currentPath != Uri.parse(target).path) {
       router.push(target);
     }
   }
