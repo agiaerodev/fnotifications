@@ -148,10 +148,10 @@ class NotificationCard extends StatelessWidget {
     );
   }
 
-  /// Un `link` interno abre la vista dentro de la app, igual que al tocar el
-  /// push; uno http(s) sigue siendo contenido web y va al navegador.
+  // An internal `link` opens the view within the app, just like tapping the
+  // push button; an HTTP(S) link is still web content and opens in the browser.
   Future<void> _openLink(BuildContext context, String link) async {
-    final location = normalizeNotificationLink(link);
+    final location = normalizeNotificationLink(link, message: description);
     if (location != null) {
       context.push(location);
       return;
