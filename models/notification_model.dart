@@ -1,3 +1,5 @@
+import '../routes/notification_deep_link.dart';
+
 class NotificationListResponse {
   final List<AppNotification> data;
   final NotificationMeta meta;
@@ -70,7 +72,7 @@ class AppNotification {
       message: (json['message'] ?? '').toString(),
       icon: json['icon']?.toString(),
       isRead: json['isRead'] == true || json['is_read'] == true,
-      link: json['link']?.toString(),
+      link: resolveNotificationLocation(json) ?? json['link']?.toString(),
       recipient: json['recipient']?.toString(),
       mediaFiles: NotificationMediaFiles.fromJson(
         Map<String, dynamic>.from(json['mediaFiles'] ?? json['media_files'] ?? const {}),

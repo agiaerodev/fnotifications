@@ -10,6 +10,7 @@ import '../../../core/services/base_api_service.dart';
 import '../../../core/routes/app_routes.dart';
 import '../models/notification_model.dart';
 import '../routes/notification_deep_link.dart';
+import '../routes/notification_navigation.dart';
 import '../routes/notification_route_names.dart';
 
 /// Modelo simple para tipar las notificaciones dentro de la app
@@ -102,9 +103,18 @@ class NotificationProvider extends ChangeNotifier {
     await _localNotificationsPlugin.initialize(
       settings: initSettings,
       onDidReceiveNotificationResponse: (details) {
+        debugPrint('[PUSH] local notification tapped payload=${details.payload}');
         _openLocation(details.payload);
       },
     );
+
+    final launchDetails =
+        await _localNotificationsPlugin.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp == true) {
+      final payload = launchDetails?.notificationResponse?.payload;
+      debugPrint('[PUSH] local notification launched app payload=$payload');
+      _openLocation(payload);
+    }
 
     await _localNotificationsPlugin
         .resolvePlatformSpecificImplementation<
@@ -142,6 +152,12 @@ class NotificationProvider extends ChangeNotifier {
     FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
     try {
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('[PUSH] initialMessage: ${initialMessage.messageId}');
+        _onMessageOpenedApp(initialMessage);
+      }
+
       // IMPORTANT: on iOS, firebase_messaging's presentation options are
       // applied to every notification that passes through
       // UNUserNotificationCenter (including local notifications posted by
@@ -166,11 +182,6 @@ class NotificationProvider extends ChangeNotifier {
       final fcm = await _messaging.getToken();
       debugPrint('[PUSH] FCM token (desde Dart): ${fcm ?? "NULL"}');
 
-      final initialMessage = await _messaging.getInitialMessage();
-      if (initialMessage != null) {
-        debugPrint('[PUSH] initialMessage: ${initialMessage.messageId}');
-        _onMessageOpenedApp(initialMessage);
-      }
       debugPrint('[PUSH] initializeNotifications completado');
     } catch (e) {
       debugPrint('[PUSH] initializeNotifications ERROR: $e');
@@ -263,7 +274,14 @@ class NotificationProvider extends ChangeNotifier {
   void _onForegroundMessage(RemoteMessage message) {
     debugPrint('[PUSH] >>> onMessage (app ACTIVA) id=${message.messageId}');
     debugPrint('[PUSH]     title=${message.notification?.title} body=${message.notification?.body}');
-    debugPrint('[PUSH]     data=${message.data}');
+    debugPrint('[PUSH] ================= DATA =================');
+
+    message.data.forEach((key, value) {
+      debugPrint('[PUSH] $key = $value');
+    });
+
+    debugPrint('[PUSH] ================= END DATA ==================');
+
     if (!Platform.isIOS) {
       _showLocalNotification(message);
     }
@@ -286,18 +304,11 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _openLocation(String? location) {
-    final target = (location == null || location.isEmpty)
-      ? NotificationRouteNames.notifications
-      : location;
-
     final context = rootNavigatorKey.currentState?.context;
-    if (context == null) return;
-
-    final router = GoRouter.of(context);
-    final currentPath = router.routerDelegate.currentConfiguration.uri.path;
-    if (currentPath != Uri.parse(target).path) {
-      router.push(target);
-    }
+    openNotificationLocation(
+      context == null ? null : GoRouter.of(context),
+      location,
+    );
   }
 
   Future<void> _clearLocalNotifications() async {
@@ -321,7 +332,7 @@ class NotificationProvider extends ChangeNotifier {
       message: body,
       icon: message.data['icon']?.toString() ?? 'far fa-bell',
       isRead: false,
-      link: message.data['link']?.toString(),
+      link: resolveNotificationLocation(message.data),
       recipient: message.data['recipient']?.toString(),
       mediaFiles: NotificationMediaFiles(),
       sourceData: NotificationSourceData(
