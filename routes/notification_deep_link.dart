@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../chat/routes/chat_route_names.dart';
+
 String? resolveNotificationLocation(Map<String, dynamic> data) {
   final source = _findLinkSource(data);
   if (source == null) return null;
@@ -19,12 +21,40 @@ String? normalizeNotificationLink(String link, {String? message}) {
     return null;
   }
 
+  final normalizedChatRoute = _normalizeChatRoute(uri);
+  if (normalizedChatRoute != null) {
+    return normalizedChatRoute;
+  }
+
   final path = uri.path.startsWith('/') ? uri.path : '/${uri.path}';
   final query = Map<String, String>.from(uri.queryParameters);
   if (message != null && message.isNotEmpty) {
     query.putIfAbsent('message', () => message);
   }
   return Uri(path: path, queryParameters: query.isEmpty ? null : query).toString();
+}
+
+String? _normalizeChatRoute(Uri uri) {
+  final pathSegments = uri.path.split('/').where((segment) => segment.trim().isNotEmpty).toList();
+  if (pathSegments.length < 2 || pathSegments.first.toLowerCase() != 'chat') {
+    return null;
+  }
+
+  final conversationId = pathSegments[1];
+  final contextId = pathSegments.length > 2 ? pathSegments[2] : null;
+  if (conversationId.isEmpty) {
+    return null;
+  }
+
+  final query = <String, String>{'conversationId': conversationId};
+  if (contextId != null && contextId.isNotEmpty) {
+    query['contextId'] = contextId;
+  }
+  if (uri.queryParameters.isNotEmpty) {
+    query.addAll(uri.queryParameters);
+  }
+
+  return Uri(path: ChatRouteNames.chat, queryParameters: query).toString();
 }
 
 Map<String, dynamic>? _findLinkSource(Map<String, dynamic> data, [int depth = 0]) {
