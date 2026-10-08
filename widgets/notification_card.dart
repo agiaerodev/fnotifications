@@ -91,6 +91,18 @@ class NotificationCard extends StatelessWidget {
                          ),
                        ),
                      ],
+                     if (!isRead) ...[
+                       const SizedBox(width: 8),
+                       Container(
+                         width: 8,
+                         height: 8,
+                         margin: const EdgeInsets.only(top: 4),
+                         decoration: const BoxDecoration(
+                           color: Color(0xFF0288D1),
+                           shape: BoxShape.circle,
+                         ),
+                       ),
+                     ],
                    ],
                  ),
                  const SizedBox(height: 4),
