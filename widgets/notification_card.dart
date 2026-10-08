@@ -153,7 +153,16 @@ class NotificationCard extends StatelessWidget {
   Future<void> _openLink(BuildContext context, String link) async {
     final location = normalizeNotificationLink(link, message: description);
     if (location != null) {
-      context.push(location);
+      final router = GoRouter.of(context);
+      // An unregistered route would fall into the router's onException
+      // fallback, which reopens notifications instead of the view.
+      if (router.configuration.findMatch(Uri.parse(location)).isError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This content is not available.')),
+        );
+        return;
+      }
+      router.push(location);
       return;
     }
 
