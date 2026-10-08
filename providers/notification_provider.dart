@@ -176,7 +176,13 @@ class NotificationProvider extends ChangeNotifier {
       await initializeLocalNotifications();
 
       if (Platform.isIOS) {
-        final apns = await _messaging.getAPNSToken();
+        String? apns = await _messaging.getAPNSToken();
+        int retries = 0;
+        while (apns == null && retries < 10) {
+          await Future.delayed(const Duration(seconds: 1));
+          apns = await _messaging.getAPNSToken();
+          retries++;
+        }
         debugPrint('[PUSH] APNs token (desde Dart): ${apns ?? "NULL -> APNs no registrado"}');
       }
       final fcm = await _messaging.getToken();
@@ -282,9 +288,7 @@ class NotificationProvider extends ChangeNotifier {
 
     debugPrint('[PUSH] ================= END DATA ==================');
 
-    if (!Platform.isIOS) {
-      _showLocalNotification(message);
-    }
+    unawaited(_showLocalNotification(message));
     _addNotificationToList(message);
     _setHasUnread(true);
   }
