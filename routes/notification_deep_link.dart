@@ -69,6 +69,7 @@ String? _normalizeChatRoute(Uri uri, {String? senderName}) {
   if (normalizedSenderName != null && _nonEmpty(query['senderName']) == null) {
     query['senderName'] = normalizedSenderName;
   }
+  query['fromNotification'] = 'true';
 
   return Uri(path: ChatRouteNames.chat, queryParameters: query).toString();
 }
