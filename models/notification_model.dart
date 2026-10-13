@@ -25,7 +25,7 @@ class NotificationListResponse {
     return NotificationListResponse(
       data: notifications,
       meta: NotificationMeta.fromJson(
-        Map<String, dynamic>.from(json['meta'] ?? const {}),
+        _asJsonMap(json['meta']),
       ),
     );
   }
@@ -75,10 +75,10 @@ class AppNotification {
       link: resolveNotificationLocation(json) ?? json['link']?.toString(),
       recipient: json['recipient']?.toString(),
       mediaFiles: NotificationMediaFiles.fromJson(
-        Map<String, dynamic>.from(json['mediaFiles'] ?? json['media_files'] ?? const {}),
+        _asJsonMap(json['mediaFiles'] ?? json['media_files']),
       ),
       sourceData: NotificationSourceData.fromJson(
-        Map<String, dynamic>.from(json['sourceData'] ?? json['source_data'] ?? const {}),
+        _asJsonMap(json['sourceData'] ?? json['source_data']),
       ),
       user: json['user'] is Map ? Map<String, dynamic>.from(json['user']) : null,
       createdAt: _tryParseDateTime(json['createdAt'] ?? json['created_at']),
@@ -160,7 +160,7 @@ class NotificationMeta {
   factory NotificationMeta.fromJson(Map<String, dynamic> json) {
     return NotificationMeta(
       page: NotificationPageInfo.fromJson(
-        Map<String, dynamic>.from(json['page'] ?? const {}),
+        _asJsonMap(json['page']),
       ),
     );
   }
@@ -198,9 +198,7 @@ DateTime? _tryParseDateTime(dynamic value) {
 }
 
 int _asInt(dynamic value) {
-  if (value is int) return value;
-  if (value is String) return int.tryParse(value) ?? 0;
-  return 0;
+  return _asNullableInt(value) ?? 0;
 }
 
 int? _asNullableInt(dynamic value) {
@@ -208,4 +206,10 @@ int? _asNullableInt(dynamic value) {
   if (value is int) return value;
   if (value is String) return int.tryParse(value);
   return null;
+}
+
+Map<String, dynamic> _asJsonMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return const {};
 }
