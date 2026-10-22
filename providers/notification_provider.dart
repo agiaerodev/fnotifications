@@ -12,21 +12,7 @@ import '../models/notification_model.dart';
 import '../routes/notification_deep_link.dart';
 import '../routes/notification_navigation.dart';
 import '../routes/notification_route_names.dart';
-
-/// Modelo simple para tipar las notificaciones dentro de la app
-class PushNotification {
-  final String title;
-  final String body;
-  final DateTime receivedAt;
-  final Map<String, dynamic> data;
-
-  PushNotification({
-    required this.title,
-    required this.body,
-    required this.receivedAt,
-    this.data = const {},
-  });
-}
+import '../utils/notification_text.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -43,12 +29,9 @@ class NotificationProvider extends ChangeNotifier {
   );
 
   bool _hasUnreadNotification = false;
-  final List<PushNotification> _notifications = [];
   List<AppNotification> _apiNotifications = [];
-  GlobalKey<ScaffoldMessengerState>? _snackbarKey;
   bool _isLoading = false;
   bool _isLoadingMore = false;
-  bool _isRefreshing = false;
   String? _errorMessage;
   int _currentPage = 1;
   int _lastPage = 1;
@@ -57,11 +40,9 @@ class NotificationProvider extends ChangeNotifier {
 
   // Getters
   bool get hasUnreadNotification => _hasUnreadNotification;
-  List<PushNotification> get notifications => List.unmodifiable(_notifications);
   List<AppNotification> get apiNotifications => List.unmodifiable(_apiNotifications);
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
-  bool get isRefreshing => _isRefreshing;
   bool get hasLoadedOnce => _hasLoadedOnce;
   bool get hasNextPage => _currentPage < _lastPage;
   String? get errorMessage => _errorMessage;
@@ -69,10 +50,6 @@ class NotificationProvider extends ChangeNotifier {
     final apiUnreadCount = _apiNotifications.where((item) => !item.isRead).length;
     if (apiUnreadCount > 0) return apiUnreadCount;
     return _hasUnreadNotification ? 1 : 0;
-  }
-
-  void setSnackBarKey(GlobalKey<ScaffoldMessengerState> key) {
-    _snackbarKey = key;
   }
 
   void setCurrentUser(dynamic user) {
@@ -141,6 +118,38 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  static Future<void> showBackgroundNotification(RemoteMessage message) async {
+    // Firebase displays notification-payload messages itself; only data-only
+    // messages can be rendered here with their content sanitized.
+    if (message.notification != null) return;
+
+    final title = extractNotificationTitle(message);
+    final body = extractNotificationBody(message);
+    if (body.isEmpty) return;
+
+    final plugin = FlutterLocalNotificationsPlugin();
+    await plugin.initialize(
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(),
+      ),
+    );
+    await plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_channel);
+    await plugin.show(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title: title,
+      body: body,
+      notificationDetails: _notificationDetails(title),
+      payload:
+          resolveNotificationLocation(message.data) ??
+          NotificationRouteNames.notifications,
+    );
+  }
+
   Future<void> initializeNotifications() async {
     debugPrint('[PUSH] initializeNotifications: registrando listeners onMessage/onMessageOpenedApp');
     // Register the foreground listener first so a failure in the permission or
@@ -199,7 +208,6 @@ class NotificationProvider extends ChangeNotifier {
     if (loadMore && !hasNextPage) return;
 
     if (refresh) {
-      _isRefreshing = true;
       _currentPage = 1;
       _lastPage = 1;
     } else if (loadMore) {
@@ -238,9 +246,9 @@ class NotificationProvider extends ChangeNotifier {
       if (refresh || page == 1) {
         _apiNotifications = incoming;
       } else {
+        final existingIds = _apiNotifications.map((item) => item.id).toSet();
         for (final item in incoming) {
-          final exists = _apiNotifications.any((existing) => existing.id == item.id);
-          if (!exists) {
+          if (existingIds.add(item.id)) {
             _apiNotifications.add(item);
           }
         }
@@ -256,7 +264,6 @@ class NotificationProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       _isLoadingMore = false;
-      _isRefreshing = false;
       notifyListeners();
     }
   }
@@ -326,8 +333,8 @@ class NotificationProvider extends ChangeNotifier {
 
   void _addNotificationToList(RemoteMessage message) {
     final now = DateTime.now();
-    final title = message.notification?.title ?? message.data['title'] ?? 'New notification';
-    final body = _extractNotificationBody(message);
+    final title = extractNotificationTitle(message);
+    final body = extractNotificationBody(message);
 
     final appNotification = AppNotification(
       id: int.tryParse(message.data['id']?.toString() ?? '') ?? now.millisecondsSinceEpoch,
@@ -351,72 +358,48 @@ class NotificationProvider extends ChangeNotifier {
       timeAgo: 'just now',
     );
 
-    _notifications.insert(
-      0,
-      PushNotification(
-        title: title,
-        body: body,
-        receivedAt: now,
-        data: message.data,
-      ),
-    );
-
     _apiNotifications.removeWhere((item) => item.id == appNotification.id);
     _apiNotifications.insert(0, appNotification);
     notifyListeners();
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    final title = message.notification?.title ?? message.data['title'] ?? 'New notification';
-    final body = _stripHtml(_extractNotificationBody(message));
+    final title = extractNotificationTitle(message);
+    final body = extractNotificationBody(message);
 
     await _localNotificationsPlugin.show(
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title: title,
       body: body,
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
-          importance: Importance.max,
-          priority: Priority.high,
-          ticker: title,
-        ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          presentBanner: true,
-          presentList: true,
-        ),
-      ),
+      notificationDetails: _notificationDetails(title),
       payload: resolveNotificationLocation(message.data) ??
           NotificationRouteNames.notifications,
     );
   }
 
+  static NotificationDetails _notificationDetails(String title) {
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        _channel.id,
+        _channel.name,
+        channelDescription: _channel.description,
+        importance: Importance.max,
+        priority: Priority.high,
+        ticker: title,
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        presentBanner: true,
+        presentList: true,
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _notifications.clear();
     _apiNotifications = [];
     super.dispose();
-  }
-
-  String _extractNotificationBody(RemoteMessage message) {
-    final dataMessage = message.data['message']?.toString().trim();
-    if (dataMessage != null && dataMessage.isNotEmpty) {
-      return dataMessage;
-    }
-    final notificationBody = message.notification?.body?.trim();
-    if (notificationBody != null && notificationBody.isNotEmpty) {
-      return notificationBody;
-    }
-    return '';
-  }
-
-  String _stripHtml(String value) {
-    final withoutTags = value.replaceAll(RegExp(r'<[^>]*>'), ' ');
-    return withoutTags.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 }
