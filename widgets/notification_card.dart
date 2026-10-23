@@ -25,7 +25,8 @@ class NotificationCard extends StatelessWidget {
     final String timeAgo = (data['timeAgo'] ?? '').toString();
     final bool isRead = data['isRead'] == true;
     final config = _getStyleConfig(type);
-    final String rawIcon = (data['icon'] ?? data['sourceIcon'] ?? '').toString();
+    final String rawIcon = (data['icon'] ?? data['sourceIcon'] ?? '')
+        .toString();
     final String link = (data['link'] ?? '').toString();
     final bool hasHtmlContent = _containsHtml(description);
 
@@ -46,98 +47,98 @@ class NotificationCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 50,
-              height: 50,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: config.backgroundColor,
-                shape: BoxShape.circle,
-              ),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: Center(child: _buildIcon(rawIcon, config)),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                 Row(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     Expanded(
-                       child: Text(
-                         title,
-                         style: TextStyle(
-                           fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
-                           fontSize: 16,
-                           color: const Color(0xFF1E293B),
-                         ),
-                       ),
-                     ),
-                     if (timeAgo.isNotEmpty) ...[
-                       const SizedBox(width: 12),
-                       Text(
-                         timeAgo,
-                         style: TextStyle(
-                           fontSize: 12,
-                           color: Colors.blueGrey[300],
-                         ),
-                       ),
-                     ],
-                     if (!isRead) ...[
-                       const SizedBox(width: 8),
-                       Container(
-                         width: 8,
-                         height: 8,
-                         margin: const EdgeInsets.only(top: 4),
-                         decoration: const BoxDecoration(
-                           color: Color(0xFF0288D1),
-                           shape: BoxShape.circle,
-                         ),
-                       ),
-                     ],
-                   ],
-                 ),
-                 const SizedBox(height: 4),
-                 hasHtmlContent
-                     ? Html(
-                         data: description,
-                         style: {
-                           'html': Style(
-                             margin: Margins.zero,
-                             padding: HtmlPaddings.zero,
-                           ),
-                           'body': Style(
-                             margin: Margins.zero,
-                             padding: HtmlPaddings.zero,
-                             fontSize: FontSize(14),
-                             color: Colors.blueGrey[400],
-                           ),
-                           'p': Style(
-                             margin: Margins.only(bottom: 12),
-                             padding: HtmlPaddings.zero,
-                           ),
-                           'strong': Style(fontWeight: FontWeight.w700),
-                         },
-                       )
-                     : Text(
-                         description,
-                         style: TextStyle(
-                           fontSize: 14,
-                           color: Colors.blueGrey[400],
-                           height: 1.4,
-                         ),
-                       ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: config.backgroundColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Center(child: _buildIcon(rawIcon, config)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: isRead
+                              ? FontWeight.w600
+                              : FontWeight.bold,
+                          fontSize: 16,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                      if (timeAgo.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          timeAgo,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blueGrey[300],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (!isRead) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0288D1),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
+            const SizedBox(height: 12),
+            hasHtmlContent
+                ? Html(
+                    data: description,
+                    style: {
+                      'html': Style(
+                        margin: Margins.zero,
+                        padding: HtmlPaddings.zero,
+                      ),
+                      'body': Style(
+                        margin: Margins.zero,
+                        padding: HtmlPaddings.zero,
+                        fontSize: FontSize(14),
+                        color: Colors.blueGrey[400],
+                      ),
+                      'p': Style(
+                        margin: Margins.only(bottom: 12),
+                        padding: HtmlPaddings.zero,
+                      ),
+                      'strong': Style(fontWeight: FontWeight.w700),
+                    },
+                  )
+                : Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.blueGrey[400],
+                      height: 1.4,
+                    ),
+                  ),
           ],
         ),
       ),
@@ -153,11 +154,7 @@ class NotificationCard extends StatelessWidget {
       );
     }
 
-    return Icon(
-      config.icon,
-      color: config.iconColor,
-      size: 24,
-    );
+    return Icon(config.icon, color: config.iconColor, size: 24);
   }
 
   // An internal `link` opens the view within the app, just like tapping the
