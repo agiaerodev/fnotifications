@@ -145,7 +145,7 @@ class NotificationProvider extends ChangeNotifier {
       body: body,
       notificationDetails: _notificationDetails(title),
       payload:
-          resolveNotificationLocation(message.data) ??
+          resolveNotificationLocation(message.data, title: title) ??
           NotificationRouteNames.notifications,
     );
   }
@@ -304,7 +304,12 @@ class NotificationProvider extends ChangeNotifier {
     debugPrint('[PUSH] >>> onMessageOpenedApp id=${message.messageId} data=${message.data}');
     _setHasUnread(false);
     unawaited(_clearLocalNotifications());
-    _openLocation(resolveNotificationLocation(message.data));
+    _openLocation(
+      resolveNotificationLocation(
+        message.data,
+        title: extractNotificationTitle(message),
+      ),
+    );
   }
 
   void markAsRead() {
@@ -343,7 +348,7 @@ class NotificationProvider extends ChangeNotifier {
       message: body,
       icon: message.data['icon']?.toString() ?? 'far fa-bell',
       isRead: false,
-      link: resolveNotificationLocation(message.data),
+      link: resolveNotificationLocation(message.data, title: title),
       recipient: message.data['recipient']?.toString(),
       mediaFiles: NotificationMediaFiles(),
       sourceData: NotificationSourceData(
@@ -372,7 +377,7 @@ class NotificationProvider extends ChangeNotifier {
       title: title,
       body: body,
       notificationDetails: _notificationDetails(title),
-      payload: resolveNotificationLocation(message.data) ??
+      payload: resolveNotificationLocation(message.data, title: title) ??
           NotificationRouteNames.notifications,
     );
   }

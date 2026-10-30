@@ -2,13 +2,19 @@ import 'dart:convert';
 
 import '../../chat/routes/chat_route_names.dart';
 
-String? resolveNotificationLocation(Map<String, dynamic> data) {
+String? resolveNotificationLocation(
+  Map<String, dynamic> data, {
+  String? title,
+}) {
   final source = _findLinkSource(data);
   if (source == null) return null;
   return normalizeNotificationLink(
     _nonEmpty(source['link'])!,
     message: _nonEmpty(source['message']),
     senderName: _nonEmpty(source['senderName']),
+    title: _nonEmpty(title) ??
+        _nonEmpty(data['title']) ??
+        _nonEmpty(source['title']),
   );
 }
 
@@ -16,17 +22,23 @@ String? resolveNotificationLocation(Map<String, dynamic> data) {
 // Returns `null` for external links (http/https), which are handled by the browser.
 // The [message] is passed as a query parameter so that the destination view has it
 // even when the URL is stored as text (local payload, PendingDeepLink).
+// Chat links retain [title] for the header instead of using the sender's name.
 String? normalizeNotificationLink(
   String link, {
   String? message,
   String? senderName,
+  String? title,
 }) {
   final uri = Uri.tryParse(link.trim());
   if (uri == null || uri.hasScheme || uri.hasAuthority || uri.path.isEmpty) {
     return null;
   }
 
-  final normalizedChatRoute = _normalizeChatRoute(uri, senderName: senderName);
+  final normalizedChatRoute = _normalizeChatRoute(
+    uri,
+    senderName: senderName,
+    title: title,
+  );
   if (normalizedChatRoute != null) {
     return normalizedChatRoute;
   }
@@ -42,7 +54,7 @@ String? normalizeNotificationLink(
   ).toString();
 }
 
-String? _normalizeChatRoute(Uri uri, {String? senderName}) {
+String? _normalizeChatRoute(Uri uri, {String? senderName, String? title}) {
   final pathSegments = uri.pathSegments
       .where((segment) => segment.trim().isNotEmpty)
       .toList();
@@ -68,6 +80,11 @@ String? _normalizeChatRoute(Uri uri, {String? senderName}) {
   final normalizedSenderName = _nonEmpty(senderName);
   if (normalizedSenderName != null && _nonEmpty(query['senderName']) == null) {
     query['senderName'] = normalizedSenderName;
+  }
+  final normalizedTitle = _nonEmpty(title);
+  if (normalizedTitle != null) {
+    query['title'] =
+        '${normalizedTitle[0].toUpperCase()}${normalizedTitle.substring(1)}';
   }
   query['fromNotification'] = 'true';
 

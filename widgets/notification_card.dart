@@ -160,7 +160,11 @@ class NotificationCard extends StatelessWidget {
   // An internal `link` opens the view within the app, just like tapping the
   // push button; an HTTP(S) link is still web content and opens in the browser.
   Future<void> _openLink(BuildContext context, String link) async {
-    final location = normalizeNotificationLink(link, message: description);
+    final location = normalizeNotificationLink(
+      link,
+      message: description,
+      title: title,
+    );
     if (location != null) {
       final router = GoRouter.of(context);
       // An unregistered route would fall into the router's onException
