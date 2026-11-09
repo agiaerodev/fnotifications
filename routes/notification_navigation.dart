@@ -16,7 +16,13 @@ void openNotificationLocation(GoRouter? router, String? location) {
   }
 
   final currentUri = router.routerDelegate.currentConfiguration.uri;
-  final targetUri = Uri.parse(target);
+  final targetUri = Uri.tryParse(target);
+  if (targetUri == null || router.configuration.findMatch(targetUri).isError) {
+    debugPrint('[PUSH] Unavailable route, returning to notifications: $target');
+    router.go(NotificationRouteNames.notifications);
+    return;
+  }
+
   debugPrint('[PUSH] Navigation current=$currentUri target=$targetUri');
   if (currentUri != targetUri) {
     router.push(target);
