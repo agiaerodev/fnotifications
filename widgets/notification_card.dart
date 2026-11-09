@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/utils/fa_icon_mapper.dart';
+import '../../../core/widgets/app_snack_bar.dart';
 import '../routes/notification_deep_link.dart';
 
 class NotificationCard extends StatelessWidget {
@@ -171,7 +172,7 @@ class NotificationCard extends StatelessWidget {
       // fallback, which reopens notifications instead of the view.
       if (router.configuration.findMatch(Uri.parse(location)).isError) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('This content is not available.')),
+          const AppSnackBar(content: Text('This content is not available.')),
         );
         return;
       }
