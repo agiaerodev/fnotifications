@@ -12,7 +12,8 @@ String? resolveNotificationLocation(
     _nonEmpty(source['link'])!,
     message: _nonEmpty(source['message']),
     senderName: _nonEmpty(source['senderName']),
-    title: _nonEmpty(title) ??
+    title:
+        _nonEmpty(title) ??
         _nonEmpty(data['title']) ??
         _nonEmpty(source['title']),
   );
