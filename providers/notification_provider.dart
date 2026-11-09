@@ -61,7 +61,7 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('ic_notification');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -130,7 +130,7 @@ class NotificationProvider extends ChangeNotifier {
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('ic_notification'),
         iOS: DarwinInitializationSettings(),
       ),
     );
@@ -387,6 +387,7 @@ class NotificationProvider extends ChangeNotifier {
       android: AndroidNotificationDetails(
         _channel.id,
         _channel.name,
+        icon: 'ic_notification',
         channelDescription: _channel.description,
         importance: Importance.max,
         priority: Priority.high,
